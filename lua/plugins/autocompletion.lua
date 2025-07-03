@@ -1,5 +1,6 @@
 return { -- Autocompletion
 	"hrsh7th/nvim-cmp",
+	event = "InsertEnter",
 	dependencies = {
 		-- Snippet Engine & its associated nvim-cmp source
 		{
@@ -67,6 +68,7 @@ return { -- Autocompletion
 			Operator = "󰆕",
 			TypeParameter = "󰊄",
 		}
+
 		cmp.setup({
 			snippet = {
 				expand = function(args)
@@ -75,16 +77,10 @@ return { -- Autocompletion
 			},
 			completion = {
 				completeopt = "menu,menuone,noinsert",
-				-- Make completion more responsive
-				autocomplete = {
-					require("cmp.types").cmp.TriggerEvent.TextChanged,
-				},
 			},
 
 			-- For an understanding of why these mappings were
 			-- chosen, you will need to read `:help ins-completion`
-			--
-			-- No, but seriously. Please read `:help ins-completion`, it is really good!
 			mapping = cmp.mapping.preset.insert({
 				-- Select the [n]ext item
 				["<C-n>"] = cmp.mapping.select_next_item(),
@@ -104,18 +100,9 @@ return { -- Autocompletion
 				["<CR>"] = cmp.mapping.confirm({ select = true }),
 
 				-- Manually trigger a completion from nvim-cmp.
-				--  Generally you don't need this, because nvim-cmp will display
-				--  completions whenever it has completion options available.
 				["<C-Space>"] = cmp.mapping.complete({}),
 
-				-- Think of <c-l> as moving to the right of your snippet expansion.
-				--  So if you have a snippet that's like:
-				--  function $name($args)
-				--    $body
-				--  end
-				--
-				-- <c-l> will move you to the right of each of the expansion locations.
-				-- <c-h> is similar, except moving you backwards.
+				-- Luasnip navigation
 				["<C-l>"] = cmp.mapping(function()
 					if luasnip.expand_or_locally_jumpable() then
 						luasnip.expand_or_jump()
@@ -127,9 +114,7 @@ return { -- Autocompletion
 					end
 				end, { "i", "s" }),
 
-				-- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
-				--    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
-				-- Select next/previous item with Tab / Shift + Tab
+				-- Tab completion
 				["<Tab>"] = cmp.mapping(function(fallback)
 					if cmp.visible() then
 						cmp.select_next_item()
@@ -149,17 +134,14 @@ return { -- Autocompletion
 					end
 				end, { "i", "s" }),
 			}),
-			sources = {
-				{
-					name = "lazydev",
-					-- set group index to 0 to skip loading LuaLS completions as lazydev recommends it
-					group_index = 0,
-				},
-				{ name = "nvim_lsp", priority = 1000 },
-				{ name = "luasnip", priority = 750 },
-				{ name = "buffer", priority = 500 },
-				{ name = "path", priority = 250 },
-			},
+
+			sources = cmp.config.sources({
+				{ name = "nvim_lsp" },
+				{ name = "luasnip" },
+				{ name = "buffer" },
+				{ name = "path" },
+			}),
+
 			formatting = {
 				fields = { "kind", "abbr", "menu" },
 				format = function(entry, vim_item)
@@ -173,37 +155,17 @@ return { -- Autocompletion
 					return vim_item
 				end,
 			},
-			-- Ensure completion works in all contexts
-			enabled = function()
-				-- Disable completion in comments except for YAML files
-				local context = require("cmp.config.context")
-				local filetype = vim.bo.filetype
 
+			-- Enable completion everywhere
+			enabled = function()
+				-- Disable completion in comments
+				local context = require("cmp.config.context")
 				if vim.api.nvim_get_mode().mode == "c" then
-					return true
-				elseif filetype == "yaml" or filetype == "yml" then
-					-- Always enable completion for YAML files
 					return true
 				else
 					return not context.in_treesitter_capture("comment") and not context.in_syntax_group("Comment")
 				end
 			end,
-		})
-
-		-- Set specific configuration for YAML files
-		cmp.setup.filetype({ "yaml", "yml" }, {
-			sources = cmp.config.sources({
-				{ name = "nvim_lsp", priority = 1000 },
-				{ name = "luasnip", priority = 750 },
-				{ name = "buffer", priority = 500 },
-				{ name = "path", priority = 250 },
-			}),
-			completion = {
-				completeopt = "menu,menuone,noinsert",
-				autocomplete = {
-					require("cmp.types").cmp.TriggerEvent.TextChanged,
-				},
-			},
 		})
 	end,
 }

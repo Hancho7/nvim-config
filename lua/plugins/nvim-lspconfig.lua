@@ -15,24 +15,18 @@ return {
 		-- Main LSP Configuration
 		"neovim/nvim-lspconfig",
 		dependencies = {
-			{ "mason-org/mason.nvim", opts = {} },
-			"mason-org/mason-lspconfig.nvim",
+			{ "williamboman/mason.nvim", opts = {} },
+			"williamboman/mason-lspconfig.nvim",
 			"WhoIsSethDaniel/mason-tool-installer.nvim",
 
 			-- Useful status updates for LSP.
 			{ "j-hui/fidget.nvim", opts = {} },
 
-			-- Allows extra capabilities provided by blink.cmp
+			-- Allows extra capabilities provided by nvim-cmp
 			"hrsh7th/cmp-nvim-lsp",
 		},
 		config = function()
-			-- If you're wondering about lsp vs treesitter, you can check out the wonderfully
-			-- and elegantly composed help section, `:help lsp-vs-treesitter`
-
 			--  This function gets run when an LSP attaches to a particular buffer.
-			--    That is to say, every time a new file is opened that is associated with
-			--    an lsp (for example, opening `main.rs` is associated with `rust_analyzer`) this
-			--    function will be executed to configure the current buffer
 			vim.api.nvim_create_autocmd("LspAttach", {
 				group = vim.api.nvim_create_augroup("kickstart-lsp-attach", { clear = true }),
 				callback = function(event)
@@ -54,18 +48,15 @@ return {
 					map("<leader>gi", require("telescope.builtin").lsp_implementations, "[G]oto [I]mplementation")
 
 					-- Jump to the definition of the word under your cursor.
-					--  To jump back, press <C-t>.
 					map("<leader>gd", require("telescope.builtin").lsp_definitions, "[G]oto [D]efinition")
 
 					-- WARN: This is not Goto Definition, this is Goto Declaration.
 					map("<leader>gD", vim.lsp.buf.declaration, "[G]oto [D]eclaration")
 
 					-- Fuzzy find all the symbols in your current document.
-					--  Symbols are things like variables, functions, types, etc.
 					map("<leader>gO", require("telescope.builtin").lsp_document_symbols, "Open Document Symbols")
 
 					-- Fuzzy find all the symbols in your current workspace.
-					--  Similar to document symbols, except searches over your entire project.
 					map(
 						"<leader>gW",
 						require("telescope.builtin").lsp_dynamic_workspace_symbols,
@@ -99,11 +90,7 @@ return {
 						end, "[J]ava [U]pdate project config")
 					end
 
-					-- This function resolves a difference between neovim nightly (version 0.11) and stable (version 0.10)
-					---@param client vim.lsp.Client
-					---@param method vim.lsp.protocol.Method
-					---@param bufnr? integer some lsp support methods only in specific files
-					---@return boolean
+					-- This function resolves a difference between neovim versions
 					local function client_supports_method(client, method, bufnr)
 						if vim.fn.has("nvim-0.11") == 1 then
 							return client:supports_method(method, bufnr)
@@ -112,11 +99,7 @@ return {
 						end
 					end
 
-					-- The following two autocommands are used to highlight references of the
-					-- word under your cursor when your cursor rests there for a little while.
-					--    See `:help CursorHold` for information about when this is executed
-					--
-					-- When you move your cursor, the highlights will be cleared (the second autocommand).
+					-- Document highlight setup
 					if
 						client
 						and client_supports_method(
@@ -148,8 +131,7 @@ return {
 						})
 					end
 
-					-- The following code creates a keymap to toggle inlay hints in your
-					-- code, if the language server you are using supports them
+					-- Inlay hints toggle
 					if
 						client
 						and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_inlayHint, event.buf)
@@ -162,7 +144,6 @@ return {
 			})
 
 			-- Diagnostic Config
-			-- See :help vim.diagnostic.Opts
 			vim.diagnostic.config({
 				severity_sort = true,
 				float = { border = "rounded", source = "if_many" },
@@ -179,23 +160,15 @@ return {
 					source = "if_many",
 					spacing = 2,
 					format = function(diagnostic)
-						local diagnostic_message = {
-							[vim.diagnostic.severity.ERROR] = diagnostic.message,
-							[vim.diagnostic.severity.WARN] = diagnostic.message,
-							[vim.diagnostic.severity.INFO] = diagnostic.message,
-							[vim.diagnostic.severity.HINT] = diagnostic.message,
-						}
-						return diagnostic_message[diagnostic.severity]
+						return diagnostic.message
 					end,
 				},
 			})
 
-			-- LSP servers and clients are able to communicate to each other what features they support.
-			--  By default, Neovim doesn't support everything that is in the LSP specification.
-			--  When you add blink.cmp, luasnip, etc. Neovim now has *more* capabilities.
-			--  So, we create new capabilities with blink.cmp, and then broadcast that to the servers.
+			-- Get capabilities from nvim-cmp
 			local capabilities = require("cmp_nvim_lsp").default_capabilities()
-			-- Enable the following language servers
+
+			-- Enable the following language servers (REMOVED jdtls from here)
 			local servers = {
 				lua_ls = {
 					settings = {
@@ -203,6 +176,15 @@ return {
 							completion = {
 								callSnippet = "Replace",
 							},
+							-- Make the server aware of Neovim runtime files
+							diagnostics = {
+								globals = { "vim" },
+							},
+							workspace = {
+								library = vim.api.nvim_get_runtime_file("", true),
+								checkThirdParty = false,
+							},
+							telemetry = { enable = false },
 						},
 					},
 				},
@@ -212,7 +194,6 @@ return {
 					settings = {
 						yaml = {
 							schemas = {
-								-- Add schema configurations here
 								["kubernetes"] = "*.k8s.yaml",
 								["https://json.schemastore.org/github-workflow.json"] = "/.github/workflows/*",
 							},
@@ -222,118 +203,162 @@ return {
 						},
 					},
 				},
-				-- Java Language Server
-				jdtls = {
-					cmd = { "jdtls" },
-					root_dir = require("lspconfig.util").root_pattern(
-						".git",
-						"mvnw",
-						"gradlew",
-						"pom.xml",
-						"build.gradle",
-						"build.gradle.kts"
-					),
-					settings = {
-						java = {
-							configuration = {
-								runtimes = {
-									{
-										name = "JavaSE-17",
-										path = "/usr/lib/jvm/java-17-openjdk-amd64/", -- Adjust path as needed
-									},
-									{
-										name = "JavaSE-21",
-										path = "/usr/lib/jvm/java-21-openjdk-amd64/", -- Adjust path as needed
-									},
-								},
-							},
-							eclipse = {
-								downloadSources = true,
-							},
-							maven = {
-								downloadSources = true,
-							},
-							implementationsCodeLens = {
-								enabled = true,
-							},
-							referencesCodeLens = {
-								enabled = true,
-							},
-							references = {
-								includeDecompiledSources = true,
-							},
-							format = {
-								enabled = true,
-								settings = {
-									url = vim.fn.stdpath("config") .. "/lang-servers/intellij-java-google-style.xml",
-									profile = "GoogleStyle",
-								},
-							},
-							signatureHelp = { enabled = true },
-							contentProvider = { preferred = "fernflower" },
-							completion = {
-								favoriteStaticMembers = {
-									"org.hamcrest.MatcherAssert.assertThat",
-									"org.hamcrest.Matchers.*",
-									"org.hamcrest.CoreMatchers.*",
-									"org.junit.jupiter.api.Assertions.*",
-									"java.util.Objects.requireNonNull",
-									"java.util.Objects.requireNonNullElse",
-									"org.mockito.Mockito.*",
-								},
-								importOrder = {
-									"java",
-									"javax",
-									"com",
-									"org",
-								},
-							},
-							sources = {
-								organizeImports = {
-									starThreshold = 9999,
-									staticStarThreshold = 9999,
-								},
-							},
-							codeGeneration = {
-								toString = {
-									template = "${object.className}{${member.name()}=${member.value}, ${otherMembers}}",
-								},
-								useBlocks = true,
-							},
-						},
-					},
-					flags = {
-						allow_incremental_sync = true,
-					},
-					init_options = {
-						bundles = {},
-					},
-				},
+				-- NOTE: jdtls is handled separately by nvim-jdtls plugin
 			}
 
 			-- Ensure the servers and tools above are installed
 			local ensure_installed = vim.tbl_keys(servers or {})
 			vim.list_extend(ensure_installed, {
 				"stylua",
-				"google-java-format", -- Java formatter
-				"prettier", -- YAML formatter
+				"google-java-format",
+				"prettier",
+				"jdtls", -- Still install jdtls through mason
 			})
 			require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
 
 			require("mason-lspconfig").setup({
-				ensure_installed = {}, -- explicitly set to an empty table (Kickstart populates installs via mason-tool-installer)
-				automatic_enable = true,
-				automatic_installation = false,
+				ensure_installed = {},
+				automatic_installation = true,
 				handlers = {
 					function(server_name)
+						-- Skip jdtls as it's handled by nvim-jdtls
+						if server_name == "jdtls" then
+							return
+						end
+
 						local server = servers[server_name] or {}
-						-- This handles overriding only values explicitly passed
-						-- by the server configuration above. Useful when disabling
-						-- certain features of an LSP (for example, turning off formatting for ts_ls)
 						server.capabilities = vim.tbl_deep_extend("force", {}, capabilities, server.capabilities or {})
 						require("lspconfig")[server_name].setup(server)
 					end,
 				},
+			})
+		end,
+	},
+	{
+		-- Java LSP Configuration
+		"mfussenegger/nvim-jdtls",
+		ft = "java",
+		config = function()
+			-- Function to find the Java project root
+			local function find_java_project_root(path)
+				local markers = { ".git", "mvnw", "gradlew", "pom.xml", "build.gradle", "build.gradle.kts" }
+				local root = vim.fs.find(markers, { path = path, upward = true })
+				return root and vim.fs.dirname(root[1]) or vim.fn.getcwd()
+			end
+
+			-- Setup jdtls when Java files are opened
+			vim.api.nvim_create_autocmd("FileType", {
+				pattern = "java",
+				callback = function()
+					local jdtls = require("jdtls")
+					local capabilities = require("cmp_nvim_lsp").default_capabilities()
+
+					-- Get the current file path and find project root
+					local current_file = vim.api.nvim_buf_get_name(0)
+					local project_root = find_java_project_root(current_file)
+
+					-- Create a unique workspace name based on the project root
+					local workspace_name = vim.fn.fnamemodify(project_root, ":p:h:t")
+					local workspace_dir = vim.fn.stdpath("data") .. "/jdtls-workspace/" .. workspace_name
+
+					-- JDTLS configuration
+					local config = {
+						cmd = {
+							vim.fn.stdpath("data") .. "/mason/bin/jdtls",
+							"-configuration",
+							vim.fn.stdpath("cache") .. "/jdtls/config",
+							"-data",
+							workspace_dir,
+							"-Declipse.application=org.eclipse.jdt.ls.core.id1",
+							"-Dosgi.bundles.defaultStartLevel=4",
+							"-Declipse.product=org.eclipse.jdt.ls.core.product",
+							"-Dlog.protocol=true",
+							"-Dlog.level=ALL",
+							"-Xmx1g",
+							"--add-modules=ALL-SYSTEM",
+							"--add-opens",
+							"java.base/java.util=ALL-UNNAMED",
+							"--add-opens",
+							"java.base/java.lang=ALL-UNNAMED",
+						},
+						root_dir = project_root,
+						capabilities = capabilities,
+						settings = {
+							java = {
+								eclipse = {
+									downloadSources = true,
+								},
+								maven = {
+									downloadSources = true,
+								},
+								implementationsCodeLens = {
+									enabled = true,
+								},
+								referencesCodeLens = {
+									enabled = true,
+								},
+								references = {
+									includeDecompiledSources = true,
+								},
+								format = {
+									enabled = true,
+								},
+								signatureHelp = { enabled = true },
+								contentProvider = { preferred = "fernflower" },
+								completion = {
+									favoriteStaticMembers = {
+										"org.hamcrest.MatcherAssert.assertThat",
+										"org.hamcrest.Matchers.*",
+										"org.hamcrest.CoreMatchers.*",
+										"org.junit.jupiter.api.Assertions.*",
+										"java.util.Objects.requireNonNull",
+										"java.util.Objects.requireNonNullElse",
+										"org.mockito.Mockito.*",
+									},
+									importOrder = {
+										"java",
+										"javax",
+										"com",
+										"org",
+									},
+								},
+								sources = {
+									organizeImports = {
+										starThreshold = 9999,
+										staticStarThreshold = 9999,
+									},
+								},
+								codeGeneration = {
+									toString = {
+										template = "${object.className}{${member.name()}=${member.value}, ${otherMembers}}",
+									},
+									useBlocks = true,
+								},
+								configuration = {
+									runtimes = {
+										{
+											name = "JavaSE-17",
+											path = "/usr/lib/jvm/java-17-openjdk-amd64/",
+										},
+										{
+											name = "JavaSE-21",
+											path = "/usr/lib/jvm/java-21-openjdk-amd64/",
+										},
+									},
+								},
+							},
+						},
+						init_options = {
+							bundles = {},
+						},
+						flags = {
+							allow_incremental_sync = true,
+						},
+					}
+
+					-- Start jdtls
+					jdtls.start_or_attach(config)
+				end,
 			})
 		end,
 	},
