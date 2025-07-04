@@ -20,7 +20,6 @@ require("lazy").setup({
 	require("plugins.neotree"),
 	require("plugins.nvim-lspconfig"),
 	require("plugins.colortheme"),
-	-- require("plugins.bufferline"),
 	require("plugins.lualine"),
 	require("plugins.treesitter"),
 	require("plugins.telescope"),
@@ -35,6 +34,7 @@ require("lazy").setup({
 	require("plugins.fugitive"),
 	require("plugins.trouble"),
 	require("plugins.harpoon"),
+	require("plugins.java-boilerplate"),
 	-- etc.
 })
 

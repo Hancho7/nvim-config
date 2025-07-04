@@ -261,6 +261,9 @@ return {
 					local workspace_name = vim.fn.fnamemodify(project_root, ":p:h:t")
 					local workspace_dir = vim.fn.stdpath("data") .. "/jdtls-workspace/" .. workspace_name
 
+					-- Lombok JAR path
+					local lombok_jar = vim.fn.stdpath("data") .. "/mason/packages/jdtls/lombok.jar"
+
 					-- JDTLS configuration
 					local config = {
 						cmd = {
@@ -280,6 +283,8 @@ return {
 							"java.base/java.util=ALL-UNNAMED",
 							"--add-opens",
 							"java.base/java.lang=ALL-UNNAMED",
+							-- Add Lombok agent if the JAR exists
+							vim.fn.filereadable(lombok_jar) == 1 and ("-javaagent:" .. lombok_jar) or nil,
 						},
 						root_dir = project_root,
 						capabilities = capabilities,

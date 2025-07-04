@@ -73,3 +73,55 @@ vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, { desc = "Go to previous dia
 vim.keymap.set("n", "]d", vim.diagnostic.goto_next, { desc = "Go to next diagnostic message" })
 vim.keymap.set("n", "<leader>d", vim.diagnostic.open_float, { desc = "Open floating diagnostic message" })
 vim.keymap.set("n", "<leader>q", vim.diagnostic.setloclist, { desc = "Open diagnostics list" })
+
+-- Java Boilerplate Generation (only active in Java files)
+vim.api.nvim_create_autocmd("FileType", {
+	pattern = "java",
+	callback = function()
+		local java_opts = { noremap = true, silent = true, buffer = true }
+
+		-- Java boilerplate generation keymaps
+		vim.keymap.set(
+			"n",
+			"<leader>jg",
+			"<cmd>JavaGenerateGetters<CR>",
+			vim.tbl_extend("force", java_opts, { desc = "Generate getters" })
+		)
+		vim.keymap.set(
+			"n",
+			"<leader>js",
+			"<cmd>JavaGenerateSetters<CR>",
+			vim.tbl_extend("force", java_opts, { desc = "Generate setters" })
+		)
+		vim.keymap.set(
+			"n",
+			"<leader>jc",
+			"<cmd>JavaGenerateConstructor<CR>",
+			vim.tbl_extend("force", java_opts, { desc = "Generate constructor" })
+		)
+		vim.keymap.set(
+			"n",
+			"<leader>ja",
+			"<cmd>JavaGenerateAll<CR>",
+			vim.tbl_extend("force", java_opts, { desc = "Generate all accessors" })
+		)
+		vim.keymap.set(
+			"n",
+			"<leader>jt",
+			"<cmd>JavaGenerateToString<CR>",
+			vim.tbl_extend("force", java_opts, { desc = "Generate toString" })
+		)
+		vim.keymap.set(
+			"n",
+			"<leader>je",
+			"<cmd>JavaGenerateEquals<CR>",
+			vim.tbl_extend("force", java_opts, { desc = "Generate equals/hashCode" })
+		)
+		vim.keymap.set(
+			"n",
+			"<leader>jb",
+			"<cmd>JavaGenerateBuilder<CR>",
+			vim.tbl_extend("force", java_opts, { desc = "Generate builder pattern" })
+		)
+	end,
+})
